@@ -1,0 +1,12 @@
+{
+  "font_size_px": 18,
+  "line_height": 2.0,
+  "volume": 100,
+  "playback_rate": "1.0x",
+  "show_progress": true,
+  "auto_play_after_transcription": true,
+  "hover_delay_ms": 1000,
+  "tooltip_font_size": 14,
+  "speech_rate": 200,
+  "pause_on_tooltip": false
+}

@@ -1,0 +1,21 @@
+# EchoScribe Dependencies
+# GUI Framework
+PySide6>=6.5.0
+
+# Audio Processing
+pydub>=0.25.1
+
+# Speech Recognition
+faster-whisper>=0.10.0
+
+# Screen Capture
+mss>=9.0.1
+
+# Image Processing
+Pillow>=10.0.0
+
+# Video/Audio Library
+python-vlc>=3.0.18181
+
+# Text-to-Speech
+pyttsx3>=2.90
