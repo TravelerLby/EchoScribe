@@ -173,14 +173,15 @@ class WordTooltip(QWidget):
         super().__init__(parent)
         self.setWindowFlags(Qt.ToolTip | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setFixedSize(380, 220)
+        self.setFixedSize(380, 260)  # 增加高度以容纳收藏按钮
         self.font_size = font_size
         self.main_window = main_window
         self.current_word = ""
+        self.current_word_idx = None
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        
+        layout.setSpacing(0)
 
         self.content_label = QLabel()
         self.content_label.setWordWrap(True)
@@ -193,7 +194,7 @@ class WordTooltip(QWidget):
                     stop:0 rgba(255, 255, 255, 0.98), 
                     stop:1 rgba(248, 250, 252, 0.98));
                 border: 2px solid rgba(59, 130, 246, 0.3);
-                border-radius: 12px;
+                border-radius: 12px 12px 0px 0px;
                 padding: 12px;
                 font-size: {self.font_size}px;
                 color: #1f2937;
@@ -202,14 +203,107 @@ class WordTooltip(QWidget):
             }}
         """)
         
+        # 添加收藏按钮
+        self.favorite_button = QPushButton("⭐ 收藏")
+        self.favorite_button.setFixedHeight(35)
+        self.favorite_button.clicked.connect(self._on_favorite_clicked)
+        self.favorite_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(255, 193, 7, 0.9), 
+                    stop:1 rgba(245, 158, 11, 0.9));
+                border: 2px solid rgba(59, 130, 246, 0.3);
+                border-radius: 0px 0px 12px 12px;
+                color: white;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(255, 193, 7, 1.0), 
+                    stop:1 rgba(245, 158, 11, 1.0));
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 rgba(245, 158, 11, 1.0), 
+                    stop:1 rgba(217, 119, 6, 1.0));
+            }
+        """)
+        
         layout.addWidget(self.content_label)
+        layout.addWidget(self.favorite_button)
     
     def _on_link_clicked(self, url):
         if (url == "speak_word" or url == "#speak_word") and self.main_window and self.current_word:
             self.main_window._speak_word(self.current_word)
     
-    def setContent(self, word, entry):
+    def _on_favorite_clicked(self):
+        """处理收藏按钮点击事件"""
+        if self.main_window and self.current_word_idx is not None:
+            # 调用主窗口的收藏切换方法
+            self.main_window._on_toggle_favorite_idx(self.current_word_idx)
+            # 更新按钮状态
+            self._update_favorite_button()
+    
+    def _update_favorite_button(self):
+        """更新收藏按钮的状态"""
+        if self.main_window and self.current_word_idx is not None:
+            is_favorite = self.main_window._is_word_index_favorite(self.current_word_idx)
+            if is_favorite:
+                self.favorite_button.setText("💖 已收藏")
+                self.favorite_button.setStyleSheet("""
+                    QPushButton {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(239, 68, 68, 0.9), 
+                            stop:1 rgba(220, 38, 38, 0.9));
+                        border: 2px solid rgba(59, 130, 246, 0.3);
+                        border-radius: 0px 0px 12px 12px;
+                        color: white;
+                        font-weight: 600;
+                        font-size: 13px;
+                    }
+                    QPushButton:hover {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(239, 68, 68, 1.0), 
+                            stop:1 rgba(220, 38, 38, 1.0));
+                    }
+                    QPushButton:pressed {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(220, 38, 38, 1.0), 
+                            stop:1 rgba(185, 28, 28, 1.0));
+                    }
+                """)
+            else:
+                self.favorite_button.setText("⭐ 收藏")
+                self.favorite_button.setStyleSheet("""
+                    QPushButton {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(255, 193, 7, 0.9), 
+                            stop:1 rgba(245, 158, 11, 0.9));
+                        border: 2px solid rgba(59, 130, 246, 0.3);
+                        border-radius: 0px 0px 12px 12px;
+                        color: white;
+                        font-weight: 600;
+                        font-size: 13px;
+                    }
+                    QPushButton:hover {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(255, 193, 7, 1.0), 
+                            stop:1 rgba(245, 158, 11, 1.0));
+                    }
+                    QPushButton:pressed {
+                        background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                            stop:0 rgba(245, 158, 11, 1.0), 
+                            stop:1 rgba(217, 119, 6, 1.0));
+                    }
+                """)
+    
+    def setContent(self, word, entry, word_idx=None):
         self.current_word = word
+        self.current_word_idx = word_idx
+        
+        # 更新收藏按钮状态
+        self._update_favorite_button()
         
         if not entry:
             content = f"""
@@ -434,7 +528,7 @@ class TranscriptBrowser(QTextBrowser):
             
             font_size = parent_window.tooltip_font_size if parent_window else 14
             self._current_tooltip = WordTooltip(font_size=font_size, main_window=parent_window)
-            self._current_tooltip.setContent(clean_word, entry)
+            self._current_tooltip.setContent(clean_word, entry, idx)
             
             pos = self._current_mouse_pos
             tooltip_pos = QPoint(pos.x() - 190, pos.y() - 180)
@@ -549,6 +643,11 @@ class MainWindow(QMainWindow):
         self.text_line_height = 2.0
         
         self.auto_play_after_transcription = True
+        self.auto_scroll_enabled = False  # 新增自动滚动设置
+        self._current_word_index = -1  # 当前播放单词的索引
+        self._current_highlight_index = -1  # 当前高亮单词的索引
+        # 🎵 歌词式显示模式 - 类似网易云音乐
+        self._lyrics_mode_active = False  # 是否处于歌词模式（禁用手动滚动）
         self.hover_delay_ms = 1000
         self.tooltip_font_size = 14
         self.speech_rate = 200
@@ -567,6 +666,16 @@ class MainWindow(QMainWindow):
         self._refresh_favorites_page()
         
         self._switch_tab(0, initial=True)
+        
+        # 调试信息：显示自动滚动状态
+        print(f"[DEBUG] EchoScribe started. Auto-scroll enabled: {self.auto_scroll_enabled}")
+        print(f"[DEBUG] Word highlighting enabled: True")
+        print(f"[DEBUG] 🎵 歌词模式系统已初始化")
+        if self.auto_scroll_enabled:
+            print(f"[DEBUG] 🎵 歌词模式已启用：正在播放的单词将自动居中显示")
+            self._set_lyrics_mode(True)
+        else:
+            print(f"[DEBUG] 🎵 歌词模式待命：可在设置中启用自动滚动功能")
 
     def _get_application_path(self) -> Path:
         """Get application root directory path for reading resource files."""
@@ -593,20 +702,29 @@ class MainWindow(QMainWindow):
             if user_settings_path.exists():
                 with user_settings_path.open("r", encoding="utf-8") as f:
                     data = json.load(f)
+                print(f"[DEBUG] 从用户设置加载: {user_settings_path}")
             elif default_settings_path.exists():
                 with default_settings_path.open("r", encoding="utf-8") as f:
                     data = json.load(f)
                 self._save_settings_data(data)
+                print(f"[DEBUG] 从默认设置加载: {default_settings_path}")
             else:
                 data = {}
+                print(f"[DEBUG] 使用程序默认设置")
             
             self.text_font_size_px = data.get("font_size_px", 18)
             self.text_line_height = data.get("line_height", 2.0)
             self.auto_play_after_transcription = data.get("auto_play_after_transcription", True)
+            self.auto_scroll_enabled = data.get("auto_scroll_enabled", False)
             self.hover_delay_ms = data.get("hover_delay_ms", 1000)
             self.tooltip_font_size = data.get("tooltip_font_size", 14)
             self.speech_rate = data.get("speech_rate", 200)
             self.pause_on_tooltip = data.get("pause_on_tooltip", False)
+            
+            # 🎵 确保歌词模式状态与设置一致
+            self._lyrics_mode_active = self.auto_scroll_enabled
+            print(f"[DEBUG] 设置加载完成 - 自动滚动: {self.auto_scroll_enabled}")
+            
         except Exception as e:
             print(f"[DEBUG] Failed to load settings: {e}")
             pass
@@ -619,6 +737,7 @@ class MainWindow(QMainWindow):
             "playback_rate": self.rate_combo.currentText(),
             "show_progress": self.show_progress_checkbox.isChecked(),
             "auto_play_after_transcription": self.auto_play_after_transcription,
+            "auto_scroll_enabled": self.auto_scroll_enabled,
             "hover_delay_ms": self.hover_delay_ms,
             "tooltip_font_size": self.tooltip_font_size,
             "speech_rate": self.speech_rate,
@@ -755,6 +874,9 @@ class MainWindow(QMainWindow):
         self.transcript_browser.setLineWrapMode(QTextBrowser.WidgetWidth)
 
         self.transcript_browser.setStyleSheet("QTextBrowser#TranscriptArea { padding: 8px; }")
+        
+        # 暂时禁用用户滚动检测，确保自动滚动正常工作
+        # self.transcript_browser.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self.playback_controls = self._create_playback_controls()
         layout.addWidget(self.load_button);
         layout.addWidget(self.status_label);
@@ -789,6 +911,9 @@ class MainWindow(QMainWindow):
         self.auto_play_checkbox = QCheckBox("Play immediately after transcription (default)")
         self.auto_play_checkbox.setChecked(self.auto_play_after_transcription)
         
+        self.auto_scroll_checkbox = QCheckBox("Auto-scroll to current playing word")
+        self.auto_scroll_checkbox.setChecked(self.auto_scroll_enabled)
+        
         self.pause_on_tooltip_checkbox = QCheckBox("Pause when tooltip appears")
         self.pause_on_tooltip_checkbox.setChecked(self.pause_on_tooltip)
         
@@ -816,6 +941,7 @@ class MainWindow(QMainWindow):
         layout.addRow("Speed", self.rate_combo);
         layout.addRow("", self.show_progress_checkbox)
         layout.addRow("", self.auto_play_checkbox)
+        layout.addRow("", self.auto_scroll_checkbox)
         layout.addRow("", self.pause_on_tooltip_checkbox)
         layout.addRow("Font Size(px)", self.font_size_combo)
         layout.addRow("Line Height", self.line_height_combo)
@@ -891,6 +1017,7 @@ class MainWindow(QMainWindow):
         self.font_size_combo.currentTextChanged.connect(self._on_font_size_changed)
         self.line_height_combo.currentTextChanged.connect(self._on_line_height_changed)
         self.auto_play_checkbox.stateChanged.connect(self._on_auto_play_changed)
+        self.auto_scroll_checkbox.stateChanged.connect(self._on_auto_scroll_changed)
         self.pause_on_tooltip_checkbox.stateChanged.connect(self._on_pause_on_tooltip_changed)
         self.hover_delay_combo.currentTextChanged.connect(self._on_hover_delay_changed)
         self.tooltip_font_combo.currentTextChanged.connect(self._on_tooltip_font_changed)
@@ -943,6 +1070,11 @@ class MainWindow(QMainWindow):
         self.progress_slider.setValue(0);
         self.time_label.setText("00:00 / 00:00")
         self._pending_seek_ms = None
+        self._current_word_index = -1  # 重置当前单词索引
+        self._current_highlight_index = -1  # 重置当前高亮索引
+        # 如果之前启用了歌词模式，需要重新设置
+        if self.auto_scroll_enabled:
+            self._set_lyrics_mode(True)
 
 
         self.transcription_progress.setVisible(self.show_progress_checkbox.isChecked())
@@ -1015,6 +1147,10 @@ class MainWindow(QMainWindow):
             self.player.pause()
         self.player.setPosition(target)
         self.player.play()
+        
+        # 重置当前单词索引，让自动滚动和高亮能够正确跟踪
+        self._current_word_index = -1
+        self._current_highlight_index = -1
 
     @Slot(QUrl)
     def _on_anchor_clicked(self, url):
@@ -1032,7 +1168,6 @@ class MainWindow(QMainWindow):
         if not hasattr(self, 'words_data') or not self.words_data:
             return
         
-        sentence_break_punctuations = set(['。', '.', '！', '!', '？', '?'])
         def esc(t: str) -> str:
             return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
         def normalize_for_key(t: str) -> str:
@@ -1041,12 +1176,20 @@ class MainWindow(QMainWindow):
         for i, w in enumerate(self.words_data):
             word_text = esc(w['word'])
             start_ms = int(max(0, w['start_ms']))
-            cls = ' class="fav"' if normalize_for_key(w['word']) in self.favorites else ''
-            html_words.append(f'<a href="word:{i}:{start_ms}"{cls}>{word_text}</a>')
-            if any(p in w['word'] for p in sentence_break_punctuations):
-                html_words.append('<br/>')
-            else:
-                html_words.append('&nbsp;')
+            
+            # 构建CSS类
+            classes = []
+            if normalize_for_key(w['word']) in self.favorites:
+                classes.append('fav')
+            if i == self._current_highlight_index:
+                classes.append('current-word')
+            
+            cls = f' class="{" ".join(classes)}"' if classes else ''
+            
+            # 添加id属性以支持scrollToAnchor功能
+            html_words.append(f'<a href="word:{i}:{start_ms}" id="word{i}"{cls}>{word_text}</a>')
+            # 移除基于标点符号的强制换行，让文本自然换行
+            html_words.append('&nbsp;')
         styled_html = (
             "<html><head><style>"
             f"body {{ background: transparent; color: #333333; font-size: {self.text_font_size_px}px; line-height: {self.text_line_height}; }}"
@@ -1056,6 +1199,22 @@ class MainWindow(QMainWindow):
             "display: inline-block; "
             "}"
             "a.fav { background: rgba(255,193,7,0.35); border-radius: 8px; }"
+            "a.current-word { "
+            "background: rgba(34, 197, 94, 0.4) !important; "  # 绿色荧光笔效果
+            "border-radius: 8px; "
+            "color: #1f2937 !important; "
+            "font-weight: 600; "
+            "box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); "  # 添加绿色光晕
+            "animation: pulse-green 2s infinite; "
+            "}"
+            "@keyframes pulse-green { "
+            "0% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); } "
+            "50% { box-shadow: 0 0 12px rgba(34, 197, 94, 0.5); } "
+            "100% { box-shadow: 0 0 8px rgba(34, 197, 94, 0.3); } "
+            "}"
+            "a.current-word.fav { "  # 当前单词同时是收藏时的样式
+            "background: linear-gradient(45deg, rgba(34, 197, 94, 0.5), rgba(255,193,7,0.3)) !important; "
+            "}"
             "</style></head><body>" + ''.join(html_words) + "</body></html>"
         )
         self.transcript_browser.setHtml(styled_html)
@@ -1153,6 +1312,34 @@ class MainWindow(QMainWindow):
     def _update_progress(self, position):
         if not self.progress_slider.isSliderDown(): self.progress_slider.setValue(position)
         self._update_time_label(position)
+        
+        # 自动滚动和高亮功能
+        if hasattr(self, 'words_data') and self.words_data:
+            current_word_index = self._find_current_word_index(position)
+            if current_word_index >= 0 and current_word_index != self._current_word_index:
+                print(f"[DEBUG] Position: {position}ms, Word index: {current_word_index}")
+                self._current_word_index = current_word_index
+                
+                # 更新高亮显示
+                if current_word_index != self._current_highlight_index:
+                    old_highlight = self._current_highlight_index
+                    self._current_highlight_index = current_word_index
+                    self._update_word_highlight(old_highlight, current_word_index)
+                
+                # 🎵 歌词式自动滚动 - 当前单词始终保持在屏幕中央
+                if self.auto_scroll_enabled:
+                    # 每次单词变化都立即居中显示（歌词模式）
+                    word_text = self.words_data[current_word_index].get('word', '')
+                    print(f"[DEBUG] 歌词模式: 正在居中显示单词 '{word_text}' (索引 {current_word_index})")
+                    
+                    # 立即将当前单词居中
+                    self._center_current_word_lyrics_mode(current_word_index)
+                    
+                    # 记录自动滚动时间
+                    import time
+                    self._last_auto_scroll_time = time.time()
+        elif self.auto_scroll_enabled:
+            print(f"[DEBUG] Auto-scroll enabled but no words_data available")
 
     def _set_progress_range(self, duration):
         self.progress_slider.setRange(0, duration);
@@ -1171,6 +1358,15 @@ class MainWindow(QMainWindow):
     def _update_play_pause_button_icon(self, state):
         icon = QStyle.SP_MediaPause if state == QMediaPlayer.PlayingState else QStyle.SP_MediaPlay
         self.play_pause_button.setIcon(self.style().standardIcon(icon))
+        
+        # 当播放停止时，清除高亮
+        if state == QMediaPlayer.StoppedState:
+            if self._current_highlight_index != -1:
+                old_highlight = self._current_highlight_index
+                self._current_highlight_index = -1
+                if hasattr(self, 'words_data') and self.words_data:
+                    self._update_word_highlight(old_highlight, -1)
+            # 🎵 歌词模式下播放停止不影响滚动锁定状态（界面依然不可滚动）
 
     @Slot(str)
     def _on_transcription_error(self, error_message):
@@ -1188,6 +1384,143 @@ class MainWindow(QMainWindow):
         m, s = divmod(s, 60);
         h, m = divmod(m, 60)
         return f"{h:d}:{m:02d}:{s:02d}" if h > 0 else f"{m:02d}:{s:02d}"
+    
+    def _find_current_word_index(self, position_ms):
+        """根据当前播放位置找到对应的单词索引"""
+        if not hasattr(self, 'words_data') or not self.words_data:
+            return -1
+        
+        # 找到当前时间点应该正在播放的单词
+        # 策略：找到开始时间小于等于当前时间的最后一个单词
+        best_index = -1
+        
+        for i, word_data in enumerate(self.words_data):
+            word_start_ms = word_data.get('start_ms', 0)
+            if word_start_ms <= position_ms:
+                best_index = i
+            else:
+                # 如果当前单词的开始时间大于播放位置，就停止搜索
+                break
+        
+        # 添加调试信息
+        if best_index >= 0:
+            word_text = self.words_data[best_index].get('word', '')
+            word_start = self.words_data[best_index].get('start_ms', 0)
+            print(f"[DEBUG] Found word '{word_text}' at index {best_index}, start: {word_start}ms, current: {position_ms}ms")
+        
+        return best_index
+    
+    def _scroll_to_word(self, word_index):
+        """🎵 歌词模式中直接调用居中方法"""
+        if self.auto_scroll_enabled:
+            print(f"[DEBUG] 歌词模式滚动到单词: {word_index}")
+            self._center_current_word_lyrics_mode(word_index)
+        else:
+            print(f"[DEBUG] 非歌词模式，跳过滚动: {word_index}")
+    
+    def _update_word_highlight(self, old_index, new_index):
+        """高效地更新单词高亮，不重新渲染整个HTML"""
+        try:
+            # 为了保持简单性和稳定性，我们还是使用重新渲染的方式
+            # 在未来可以考虑更复杂的DOM操作来提高性能
+            self._render_transcript()
+            print(f"[DEBUG] Updated highlight: {old_index} -> {new_index}")
+            
+        except Exception as e:
+            print(f"[DEBUG] Failed to update word highlight: {e}")
+    
+    def _center_current_word_lyrics_mode(self, word_index):
+        """🎵 歌词模式：将当前单词精确居中到屏幕中央"""
+        try:
+            if word_index < 0 or not hasattr(self, 'words_data') or word_index >= len(self.words_data):
+                return
+                
+            # 获取视口信息
+            scrollbar = self.transcript_browser.verticalScrollBar()
+            viewport_height = self.transcript_browser.viewport().height()
+            max_scroll = scrollbar.maximum()
+            
+            # 首先尝试滚动到锚点
+            anchor_id = f"word{word_index}"
+            scroll_success = self.transcript_browser.scrollToAnchor(anchor_id)
+            
+            if scroll_success:
+                # 锚点滚动成功，进行精确居中调整
+                current_scroll = scrollbar.value()
+                
+                # 计算居中调整量：将单词从顶部附近移到精确中央
+                center_adjustment = -(viewport_height // 2)
+                
+                # 应用调整，确保不超出边界
+                new_scroll = max(0, min(current_scroll + center_adjustment, max_scroll))
+                scrollbar.setValue(new_scroll)
+                
+                print(f"[DEBUG] 歌词居中: 单词 {word_index} 滚动 {current_scroll} -> {new_scroll} (调整: {center_adjustment})")
+                
+            else:
+                # 锚点滚动失败，使用比例滚动作为备用方案
+                print(f"[DEBUG] 锚点滚动失败，使用比例居中")
+                self._center_word_proportional(word_index)
+                
+        except Exception as e:
+            print(f"[DEBUG] 歌词居中失败: {e}")
+    
+    def _center_word_proportional(self, word_index):
+        """备用的比例居中方法"""
+        try:
+            if not hasattr(self, 'words_data') or not self.words_data:
+                return
+                
+            # 基于单词在文档中的位置进行比例居中
+            scrollbar = self.transcript_browser.verticalScrollBar()
+            viewport_height = self.transcript_browser.viewport().height()
+            total_content_height = self.transcript_browser.document().size().height()
+            max_scroll = scrollbar.maximum()
+            
+            # 计算单词的相对位置
+            word_progress = word_index / max(1, len(self.words_data) - 1)
+            
+            # 估算单词位置并计算居中滚动位置
+            estimated_word_pos = word_progress * total_content_height
+            target_scroll_pos = estimated_word_pos - (viewport_height / 2)
+            
+            # 转换为滚动条值
+            if total_content_height > viewport_height:
+                scroll_ratio = target_scroll_pos / (total_content_height - viewport_height)
+                scroll_ratio = max(0.0, min(1.0, scroll_ratio))
+                target_scroll = int(scroll_ratio * max_scroll)
+            else:
+                target_scroll = 0
+            
+            scrollbar.setValue(target_scroll)
+            print(f"[DEBUG] 比例居中: 单词 {word_index} -> 滚动 {target_scroll}")
+            
+        except Exception as e:
+            print(f"[DEBUG] 比例居中失败: {e}")
+    
+    def _set_lyrics_mode(self, enabled):
+        """设置歌词模式（禁用/启用手动滚动）"""
+        try:
+            self._lyrics_mode_active = enabled
+            scrollbar = self.transcript_browser.verticalScrollBar()
+            
+            if enabled:
+                # 歌词模式：禁用手动滚动
+                scrollbar.setEnabled(False)
+                print(f"[DEBUG] 歌词模式已启用 - 界面滚动已禁用")
+            else:
+                # 正常模式：允许手动滚动
+                scrollbar.setEnabled(True)
+                print(f"[DEBUG] 歌词模式已禁用 - 界面滚动已启用")
+                
+        except Exception as e:
+            print(f"[DEBUG] 设置歌词模式失败: {e}")
+    
+    def _on_scroll_value_changed(self, value):
+        """用户滚动检测（当前已禁用）"""
+        # 这个方法当前被禁用，以确保自动滚动优先工作
+        # 如果需要重新启用用户滚动检测，可以在这里添加逻辑
+        pass
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls(): event.acceptProposedAction()
@@ -1226,29 +1559,48 @@ class MainWindow(QMainWindow):
         super().mouseReleaseEvent(event)
 
     def _reset_settings(self):
+        print(f"[DEBUG] 🔄 正在重置所有设置到默认值...")
+        
         # Reset to default values
         self.text_font_size_px = 18
         self.text_line_height = 2.0
         self.auto_play_after_transcription = True
+        self.auto_scroll_enabled = False
         self.hover_delay_ms = 1000
         self.tooltip_font_size = 14
         self.speech_rate = 200
         self.pause_on_tooltip = False
+        
+        # 🎵 重置歌词模式相关状态
+        self._lyrics_mode_active = False
+        self._current_word_index = -1
+        self._current_highlight_index = -1
+        
+        # 重置界面控件
+        print(f"[DEBUG] 正在重置界面控件...")
         self.volume_slider.setValue(100)
         self.rate_combo.setCurrentText("1.0x")
         self.show_progress_checkbox.setChecked(True)
         self.auto_play_checkbox.setChecked(True)
+        self.auto_scroll_checkbox.setChecked(False)  # 这会触发_on_auto_scroll_changed
         self.pause_on_tooltip_checkbox.setChecked(False)
-        self.font_size_combo.setCurrentText("18 (默认)")
-        self.line_height_combo.setCurrentText("标准 (2.0) (默认)")
+        self.font_size_combo.setCurrentText("18 (default)")
+        self.line_height_combo.setCurrentText("Standard (2.0) (default)")
         self.hover_delay_combo.setCurrentText("1s (default)")
-        self.tooltip_font_combo.setCurrentText("14 (默认)")
-        self.speech_rate_combo.setCurrentText("标准 (200) (默认)")
+        self.tooltip_font_combo.setCurrentText("14 (default)")
+        self.speech_rate_combo.setCurrentText("Normal (200) (default)")
+        print(f"[DEBUG] 界面控件重置完成")
+        
+        # 🎵 确保歌词模式被正确禁用（恢复手动滚动）
+        self._set_lyrics_mode(False)
+        
         # 立即保存并应用
         self._save_settings()
         self._render_transcript()
         self._set_volume(100)
         self.player.setPlaybackRate(1.0)
+        
+        print(f"[DEBUG] ✅ 设置重置完成，歌词模式已禁用，界面滚动已恢复")
 
     @Slot(str)
     def _on_rate_changed(self, text):
@@ -1265,6 +1617,11 @@ class MainWindow(QMainWindow):
             self.text_font_size_px = int(text)
         except Exception:
             self.text_font_size_px = 18
+        
+        # 字体大小变化影响歌词居中效果
+        if self.auto_scroll_enabled:
+            print(f"[DEBUG] 字体大小已改为 {self.text_font_size_px}px (歌词模式生效)")
+            
         self._render_transcript()
         self._save_settings()
 
@@ -1276,6 +1633,11 @@ class MainWindow(QMainWindow):
             self.text_line_height = 2.4
         else:
             self.text_line_height = 2.0
+            
+        # 行间距变化影响歌词显示效果
+        if self.auto_scroll_enabled:
+            print(f"[DEBUG] 行间距已改为 {self.text_line_height} (歌词模式生效)")
+            
         self._render_transcript()
         self._save_settings()
 
@@ -1316,6 +1678,22 @@ class MainWindow(QMainWindow):
     @Slot(int)
     def _on_auto_play_changed(self, state):
         self.auto_play_after_transcription = state == 2  # Qt.Checked
+        self._save_settings()
+
+    @Slot(int)
+    def _on_auto_scroll_changed(self, state):
+        self.auto_scroll_enabled = state == 2  # Qt.Checked
+        print(f"[DEBUG] Auto-scroll setting changed to: {self.auto_scroll_enabled}")
+        
+        if self.auto_scroll_enabled:
+            # 启用歌词模式：禁用手动滚动，每次单词变化都居中
+            print(f"[DEBUG] 🎵 歌词模式已启用: 界面锁定，当前单词自动居中")
+            self._set_lyrics_mode(True)
+        else:
+            # 禁用歌词模式：恢复手动滚动
+            print(f"[DEBUG] 🎵 歌词模式已禁用: 恢复手动滚动")
+            self._set_lyrics_mode(False)
+            
         self._save_settings()
 
     @Slot(int)
